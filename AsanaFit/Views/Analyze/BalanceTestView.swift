@@ -9,12 +9,15 @@ struct BalanceTestView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage(SettingsKey.voiceCoach) private var voiceCoach = true
     @AppStorage(SettingsKey.haptics) private var haptics = true
+    @AppStorage(SettingsKey.voiceLanguage) private var voiceLanguageRaw = VoiceLanguage.english.rawValue
 
     @State private var tracker = BodyTracker()
     @State private var engine = BalanceTestEngine()
     @State private var coach: Coach?
     @State private var started = false
     @State private var saved: BalanceCheck?
+
+    private var voice: VoiceLanguage { VoiceLanguage(rawValue: voiceLanguageRaw) ?? .english }
 
     var body: some View {
         ZStack {
@@ -173,7 +176,7 @@ struct BalanceTestView: View {
     private func begin() {
         started = true
         UIApplication.shared.isIdleTimerDisabled = true
-        coach = Coach(voiceEnabled: voiceCoach, hapticsEnabled: haptics)
+        coach = Coach(voiceEnabled: voiceCoach, hapticsEnabled: haptics, language: voice)
         engine.onEvent = { message in
             coach?.tap()
             coach?.say(message)
@@ -186,7 +189,7 @@ struct BalanceTestView: View {
         }
         tracker.simulatedTarget = AsanaLibrary.asana(id: "tree")?.figure ?? .mountain
         tracker.start()
-        coach?.say("Balance test. Step back so the camera can see all of you.")
+        coach?.say(Script.balanceIntro(in: voice))
     }
 
     private func stopEarly() {

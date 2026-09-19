@@ -31,6 +31,7 @@ struct PracticeSessionView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage(SettingsKey.voiceCoach) private var voiceCoach = true
     @AppStorage(SettingsKey.haptics) private var haptics = true
+    @AppStorage(SettingsKey.voiceLanguage) private var voiceLanguageRaw = VoiceLanguage.english.rawValue
     @AppStorage(SettingsKey.showSkeleton) private var showSkeleton = true
     @AppStorage(SettingsKey.showGuide) private var showGuide = true
     @AppStorage(SettingsKey.tolerance) private var tolerance = 1.0
@@ -80,6 +81,8 @@ struct PracticeSessionView: View {
         .onDisappear(perform: tearDown)
     }
 
+    private var voice: VoiceLanguage { VoiceLanguage(rawValue: voiceLanguageRaw) ?? .english }
+
     private var current: PracticeItem? {
         index < items.count ? items[index] : nil
     }
@@ -114,7 +117,7 @@ struct PracticeSessionView: View {
     private func startSession() {
         guard engine == nil, !items.isEmpty else { return }
         UIApplication.shared.isIdleTimerDisabled = true
-        coach = Coach(voiceEnabled: voiceCoach, hapticsEnabled: haptics)
+        coach = Coach(voiceEnabled: voiceCoach, hapticsEnabled: haptics, language: voice)
         tracker.start()
         startPose(at: 0)
     }
@@ -132,8 +135,7 @@ struct PracticeSessionView: View {
             betweenPoses = false
             engine = newEngine
         }
-        let sideText = item.side == .none ? "" : ", \(item.side == .left ? "left" : "right") side"
-        coach?.say("\(item.asana.name)\(sideText). \(item.asana.facing.instruction).")
+        coach?.say(Script.poseIntro(item.staged, side: item.side, in: voice))
     }
 
     private func handle(_ event: AsanaEngine.Event) {
@@ -148,14 +150,14 @@ struct PracticeSessionView: View {
             coach.say(message, interrupt: false)
         case .holdStarted:
             coach.success()
-            coach.say("Good. Hold and breathe.")
+            coach.say(Script.holdStarted(in: voice))
         case .holdPaused:
             coach.warning()
         case .breath(let count):
             coach.tap()
             let total = engine?.asana.holdBreaths ?? 0
             if count >= total { return }
-            coach.say(count == total - 1 ? "One more breath" : "\(count)", interrupt: false)
+            coach.say(Script.breath(count, isLast: count == total - 1, in: voice), interrupt: false)
         case .finished:
             finishCurrentPose()
         }
@@ -169,14 +171,14 @@ struct PracticeSessionView: View {
         if index + 1 < items.count {
             let nextIndex = index + 1
             withAnimation { betweenPoses = true }
-            coach?.say("Release. Next: \(items[nextIndex].staged.displayName).")
+            coach?.say(Script.nextPose(Speech.name(of: items[nextIndex].staged, in: voice), in: voice))
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(3.5))
                 guard betweenPoses, !showingSummary else { return }
                 startPose(at: nextIndex)
             }
         } else {
-            coach?.say("Practice complete. Rest for a moment.")
+            coach?.say(Script.practiceComplete(in: voice))
             tracker.stop()
             showingSummary = true
         }

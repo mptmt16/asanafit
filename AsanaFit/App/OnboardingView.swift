@@ -6,6 +6,7 @@ struct OnboardingView: View {
     @AppStorage(SettingsKey.goals) private var goalsRaw = ""
     @AppStorage(SettingsKey.breathSeconds) private var breathSeconds = BreathPacer.defaultBreathSeconds
     @AppStorage(SettingsKey.tolerance) private var tolerance = 1.0
+    @AppStorage(SettingsKey.voiceLanguage) private var voiceLanguageRaw = VoiceLanguage.english.rawValue
     @State private var pageIndex = 0
 
     private var goals: Set<BodyArea> {
@@ -117,6 +118,17 @@ struct OnboardingView: View {
         slide(symbol: "wind", title: "Set your pace",
              subtitle: "Both of these can change later in Settings.") {
             VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("What language should the coach speak?").font(.subheadline.weight(.semibold))
+                    Picker("Voice language", selection: $voiceLanguageRaw) {
+                        ForEach(VoiceLanguage.allCases) { language in
+                            Text(language.displayName).tag(language.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    Text("The screens stay in English. This is the voice you hear mid-pose.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 VStack(alignment: .leading, spacing: 8) {
                     Text("How strict should the coaching be?").font(.subheadline.weight(.semibold))
                     Picker("Practice", selection: $tolerance) {

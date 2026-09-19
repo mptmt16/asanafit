@@ -8,6 +8,7 @@ struct BodyScanView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage(SettingsKey.voiceCoach) private var voiceCoach = true
     @AppStorage(SettingsKey.haptics) private var haptics = true
+    @AppStorage(SettingsKey.voiceLanguage) private var voiceLanguageRaw = VoiceLanguage.english.rawValue
     @AppStorage(SettingsKey.showSkeleton) private var showSkeleton = true
 
     @State private var tracker = BodyTracker()
@@ -15,6 +16,8 @@ struct BodyScanView: View {
     @State private var coach: Coach?
     @State private var savedScan: BodyScan?
     @State private var showingIntro = true
+
+    private var voice: VoiceLanguage { VoiceLanguage(rawValue: voiceLanguageRaw) ?? .english }
 
     var body: some View {
         ZStack {
@@ -191,7 +194,7 @@ struct BodyScanView: View {
     private func begin() {
         showingIntro = false
         UIApplication.shared.isIdleTimerDisabled = true
-        coach = Coach(voiceEnabled: voiceCoach, hapticsEnabled: haptics)
+        coach = Coach(voiceEnabled: voiceCoach, hapticsEnabled: haptics, language: voice)
         engine.onEvent = { event in handle(event) }
         tracker.onSample = { sample in
             // Demo mode has to know the shape and the direction of the step it is standing in
@@ -201,7 +204,7 @@ struct BodyScanView: View {
             engine.handle(sample)
         }
         tracker.start()
-        coach?.say("Body scan. \(engine.step.instruction).")
+        coach?.say(Script.scanIntro(engine.step.instruction, in: voice))
     }
 
     private func handle(_ event: BodyScanEngine.Event) {
@@ -211,10 +214,10 @@ struct BodyScanView: View {
             coach.say(message)
         case .step(let title, let instruction):
             coach.tap()
-            coach.say("\(title). \(instruction).")
+            coach.say(Script.scanStep(title: title, instruction: instruction, in: voice))
         case .recording:
             coach.tap()
-            coach.say("Hold still.")
+            coach.say(Script.holdStill(in: voice))
         case .stepDone:
             coach.success()
         case .finished:
@@ -224,7 +227,7 @@ struct BodyScanView: View {
 
     private func finish() {
         tracker.stop()
-        coach?.say("Scan complete.")
+        coach?.say(Script.scanComplete(in: voice))
         guard let outcome = engine.outcome else {
             dismiss()
             return

@@ -16,6 +16,8 @@ struct AsanaFitApp: App {
 enum SettingsKey {
     static let voiceCoach = "voiceCoach"
     static let haptics = "haptics"
+    /// VoiceLanguage raw value. The coach's language, separate from the interface language.
+    static let voiceLanguage = "voiceLanguage"
     static let showSkeleton = "showSkeleton"
     /// Draw the target shape faintly behind you during a pose.
     static let showGuide = "showGuide"

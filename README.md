@@ -21,6 +21,7 @@ Unlike its sibling **FaceFit**, this one needs no TrueDepth camera — any iPhon
 - An expanding dot paces the inhale and exhale, with a longer exhale than inhale
 - A wobble **pauses** the hold instead of resetting it. Five breaths in a shape you keep finding your way back into is still five breaths of practice
 - Voice coach and haptics throughout, which matters more here than in any other kind of fitness app: in half of these poses your head is turned, upside down or your eyes are shut
+- The voice coach speaks **English or Hindi**, chosen separately from the interface language
 
 **Framing that tells you the truth**
 - The preview is shown whole rather than cropped, so you see exactly what the app can see
@@ -77,6 +78,28 @@ Unlike its sibling **FaceFit**, this one needs no TrueDepth camera — any iPhon
 **Badges:** 14 of them, for streaks, breaths, minutes, the whole library, scores, balance, scans, gold mastery and sunrise practice.
 
 **Daily reminder:** an optional notification at a time you choose.
+
+## Voice language
+
+The coach speaks **English or हिन्दी**, set in Settings, Coaching or on the last onboarding
+screen. This is deliberately separate from the language the app is *displayed* in: the screens
+stay in English and only the spoken cues change, because the voice is the part you rely on
+mid-pose when your head is turned away from the screen.
+
+Everything spoken is covered: all 99 alignment cues, the way into each of the 24 poses, framing
+and facing prompts, the nine body-scan steps, the balance test and the breathing patterns. Pose
+names are spoken as their Sanskrit names in Devanagari (ताड़ासन, वीरभद्रासन) rather than a
+transliteration, which is both what the pose is called and what a Hindi voice can pronounce.
+
+Cues stay written in English in `AsanaLibrary.swift` and are translated in
+`Services/SpeechHindi.swift` at the moment they are spoken, keyed by the English text. Sentences
+that carry a name or a number are built per language in `Script`, because Hindi does not order
+its words the way English does. A cue added without a translation is spoken in English rather
+than skipped, and `Speech.untranslated()` lists the gaps. The Developer section in Settings shows
+the count.
+
+Hindi speech needs an installed `hi-IN` voice. iOS ships one, but if it has been removed Settings
+says so and points at **Settings, Accessibility, Spoken Content, Voices**.
 
 ## Requirements
 

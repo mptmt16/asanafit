@@ -8,10 +8,13 @@ struct BreathView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage(SettingsKey.voiceCoach) private var voiceCoach = true
     @AppStorage(SettingsKey.haptics) private var haptics = true
+    @AppStorage(SettingsKey.voiceLanguage) private var voiceLanguageRaw = VoiceLanguage.english.rawValue
 
     @State private var pattern = BreathPattern.all[0]
     @State private var rounds = BreathPattern.all[0].defaultRounds
     @State private var running = false
+
+    private var voice: VoiceLanguage { VoiceLanguage(rawValue: voiceLanguageRaw) ?? .english }
 
     var body: some View {
         ScrollView {
@@ -40,8 +43,8 @@ struct BreathView: View {
         .navigationTitle("Breathe")
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $running) {
-            BreathRunnerView(pattern: pattern, rounds: rounds,
-                             voiceEnabled: voiceCoach, hapticsEnabled: haptics) { seconds in
+            BreathRunnerView(pattern: pattern, rounds: rounds, voiceEnabled: voiceCoach,
+                             hapticsEnabled: haptics, language: voice) { seconds in
                 let session = BreathSession(pattern: pattern, rounds: rounds, seconds: seconds)
                 modelContext.insert(session)
                 try? modelContext.save()
@@ -93,6 +96,7 @@ struct BreathRunnerView: View {
     let rounds: Int
     let voiceEnabled: Bool
     let hapticsEnabled: Bool
+    let language: VoiceLanguage
     var onFinish: (Double) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -135,10 +139,10 @@ struct BreathRunnerView: View {
         }
         .statusBarHidden()
         .onAppear {
-            coach = Coach(voiceEnabled: voiceEnabled, hapticsEnabled: hapticsEnabled)
+            coach = Coach(voiceEnabled: voiceEnabled, hapticsEnabled: hapticsEnabled, language: language)
             startedAt = Date()
             UIApplication.shared.isIdleTimerDisabled = true
-            coach?.say("\(pattern.name). \(pattern.summary)")
+            coach?.say(Script.breathIntro(pattern, in: language))
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false

@@ -8,14 +8,16 @@ import UIKit
 final class Coach {
     var voiceEnabled: Bool
     var hapticsEnabled: Bool
+    var language: VoiceLanguage
 
     private let synthesizer = AVSpeechSynthesizer()
     private let impact = UIImpactFeedbackGenerator(style: .soft)
     private let notification = UINotificationFeedbackGenerator()
 
-    init(voiceEnabled: Bool, hapticsEnabled: Bool) {
+    init(voiceEnabled: Bool, hapticsEnabled: Bool, language: VoiceLanguage = .english) {
         self.voiceEnabled = voiceEnabled
         self.hapticsEnabled = hapticsEnabled
+        self.language = language
         if voiceEnabled {
             try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .voicePrompt, options: [.duckOthers])
             try? AVAudioSession.sharedInstance().setActive(true)
@@ -29,9 +31,11 @@ final class Coach {
         if interrupt, synthesizer.isSpeaking {
             synthesizer.stopSpeaking(at: .immediate)
         }
-        let utterance = AVSpeechUtterance(string: text)
+        // Cues are written in English everywhere else and translated here, at the last moment.
+        let utterance = AVSpeechUtterance(string: Speech.line(text, in: language))
+        utterance.voice = language.voice
         // A little slower than default: this is a voice you are meant to move to.
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.95
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * language.rateMultiplier
         utterance.postUtteranceDelay = 0.1
         synthesizer.speak(utterance)
     }

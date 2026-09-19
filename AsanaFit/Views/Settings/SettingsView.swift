@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage(SettingsKey.voiceCoach) private var voiceCoach = true
     @AppStorage(SettingsKey.haptics) private var haptics = true
+    @AppStorage(SettingsKey.voiceLanguage) private var voiceLanguageRaw = VoiceLanguage.english.rawValue
     @AppStorage(SettingsKey.showSkeleton) private var showSkeleton = true
     @AppStorage(SettingsKey.showGuide) private var showGuide = true
     @AppStorage(SettingsKey.tolerance) private var tolerance = 1.0
@@ -21,6 +22,8 @@ struct SettingsView: View {
     @State private var confirmingReset = false
     @State private var showingPaywall = false
 
+    private var voice: VoiceLanguage { VoiceLanguage(rawValue: voiceLanguageRaw) ?? .english }
+
     private var reminderTime: Binding<Date> {
         Binding {
             Calendar.current.date(bySettingHour: reminderMinutes / 60,
@@ -36,9 +39,28 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Coaching") {
+            Section {
                 Toggle("Voice coach", isOn: $voiceCoach)
+                if voiceCoach {
+                    Picker("Voice language", selection: $voiceLanguageRaw) {
+                        ForEach(VoiceLanguage.allCases) { language in
+                            Text(language.displayName).tag(language.rawValue)
+                        }
+                    }
+                    if !voice.isAvailable {
+                        Label("iOS has no " + voice.displayName + " voice installed. Add one under "
+                              + "Settings, Accessibility, Spoken Content, Voices.",
+                              systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(Theme.warm)
+                    }
+                }
                 Toggle("Haptics", isOn: $haptics)
+            } header: {
+                Text("Coaching")
+            } footer: {
+                Text("The voice language is separate from the app's language: the screens stay in "
+                     + "English and only the spoken cues change.")
             }
 
             Section {
@@ -134,6 +156,7 @@ struct SettingsView: View {
             ))
             Toggle("Show paywall on launch", isOn: $showPaywallOnLaunch)
             Button("Preview the paywall") { showingPaywall = true }
+            LabeledContent("Lines without Hindi", value: "\(Speech.untranslated().count)")
         } header: {
             Label("Developer", systemImage: "hammer.fill")
         } footer: {
