@@ -1,0 +1,137 @@
+import SwiftData
+import SwiftUI
+
+struct SettingsView: View {
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage(SettingsKey.voiceCoach) private var voiceCoach = true
+    @AppStorage(SettingsKey.haptics) private var haptics = true
+    @AppStorage(SettingsKey.showSkeleton) private var showSkeleton = true
+    @AppStorage(SettingsKey.showGuide) private var showGuide = true
+    @AppStorage(SettingsKey.tolerance) private var tolerance = 1.0
+    @AppStorage(SettingsKey.breathSeconds) private var breathSeconds = BreathPacer.defaultBreathSeconds
+    @AppStorage(SettingsKey.reminderEnabled) private var reminderEnabled = false
+    @AppStorage(SettingsKey.reminderMinutes) private var reminderMinutes = 8 * 60
+    @AppStorage(SettingsKey.hasOnboarded) private var hasOnboarded = true
+
+    @State private var notificationsDenied = false
+    @State private var confirmingReset = false
+
+    private var reminderTime: Binding<Date> {
+        Binding {
+            Calendar.current.date(bySettingHour: reminderMinutes / 60,
+                                  minute: reminderMinutes % 60, second: 0, of: .now) ?? .now
+        } set: { newValue in
+            let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+            reminderMinutes = (parts.hour ?? 8) * 60 + (parts.minute ?? 0)
+            if reminderEnabled {
+                ReminderScheduler.schedule(minutesAfterMidnight: reminderMinutes)
+            }
+        }
+    }
+
+    var body: some View {
+        Form {
+            Section("Coaching") {
+                Toggle("Voice coach", isOn: $voiceCoach)
+                Toggle("Haptics", isOn: $haptics)
+            }
+
+            Section {
+                Toggle("Show skeleton", isOn: $showSkeleton)
+                Toggle("Show pose guide", isOn: $showGuide)
+            } header: {
+                Text("On camera")
+            } footer: {
+                Text("The pose guide is the faint target shape drawn behind you. Turn it off if it gets in the way.")
+            }
+
+            Section {
+                Picker("Practice", selection: $tolerance) {
+                    Text("Gentle").tag(1.5)
+                    Text("Standard").tag(1.0)
+                    Text("Precise").tag(0.75)
+                }
+                .pickerStyle(.segmented)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Seconds per breath")
+                        Spacer()
+                        Text("\(breathSeconds.trimmedString)s")
+                            .foregroundStyle(.secondary).monospacedDigit()
+                    }
+                    Slider(value: $breathSeconds, in: 3...10, step: 0.5).tint(Theme.accent)
+                }
+            } header: {
+                Text("How hard, how slow")
+            } footer: {
+                Text("Gentle widens every alignment target. Longer breaths make every hold longer: five breaths at \(breathSeconds.trimmedString) seconds is \(Int(breathSeconds * 5)) seconds in the shape.")
+            }
+
+            Section {
+                Toggle("Daily reminder", isOn: $reminderEnabled)
+                if reminderEnabled {
+                    DatePicker("Time", selection: reminderTime, displayedComponents: .hourAndMinute)
+                }
+                if notificationsDenied {
+                    Label("Notifications are turned off for AsanaFit in iOS Settings.",
+                          systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(Theme.warm)
+                }
+            } header: {
+                Text("Reminder")
+            }
+
+            Section {
+                Button("Show the welcome screen again") { hasOnboarded = false }
+                Button("Delete all history", role: .destructive) { confirmingReset = true }
+            } header: {
+                Text("Data")
+            } footer: {
+                Text("Everything AsanaFit records lives on this phone only. No account, no upload, no camera frames saved.")
+            }
+
+            Section {
+                LabeledContent("Version", value: "1.0")
+                LabeledContent("Poses", value: "\(AsanaLibrary.all.count)")
+                LabeledContent("Flows", value: "\(FlowLibrary.all.count)")
+            } footer: {
+                Text("AsanaFit is a wellness tool, not a medical device. It does not diagnose or treat anything. If you are pregnant, recovering from injury, or have a condition affecting your joints, spine or blood pressure, check with a clinician before starting.")
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(Color.black.ignoresSafeArea())
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: reminderEnabled) { _, isOn in
+            Task { await updateReminder(isOn) }
+        }
+        .alert("Delete all history?", isPresented: $confirmingReset) {
+            Button("Delete", role: .destructive) { deleteEverything() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Every pose, scan, balance test and breathing practice is removed. This cannot be undone.")
+        }
+    }
+
+    private func updateReminder(_ isOn: Bool) async {
+        guard isOn else {
+            ReminderScheduler.disable()
+            notificationsDenied = false
+            return
+        }
+        let granted = await ReminderScheduler.enable(minutesAfterMidnight: reminderMinutes)
+        if !granted {
+            reminderEnabled = false
+            notificationsDenied = true
+        }
+    }
+
+    private func deleteEverything() {
+        try? modelContext.delete(model: PracticeSession.self)
+        try? modelContext.delete(model: BodyScan.self)
+        try? modelContext.delete(model: BalanceCheck.self)
+        try? modelContext.delete(model: BreathSession.self)
+        try? modelContext.save()
+    }
+}
