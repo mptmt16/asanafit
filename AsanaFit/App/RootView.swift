@@ -7,6 +7,7 @@ enum AppTab: Hashable {
 struct RootView: View {
     @AppStorage(SettingsKey.hasOnboarded) private var hasOnboarded = false
     @State private var tab: AppTab = .today
+    @State private var showingPaywall = false
 
     var body: some View {
         TabView(selection: $tab) {
@@ -28,6 +29,12 @@ struct RootView: View {
         }
         .fullScreenCover(isPresented: Binding(get: { !hasOnboarded }, set: { hasOnboarded = !$0 })) {
             OnboardingView { hasOnboarded = true }
+        }
+        .sheet(isPresented: $showingPaywall) { PaywallView() }
+        .task {
+            // Development switch, for looking at the first-run paywall without reinstalling.
+            guard DevFlags.showPaywallOnLaunch, hasOnboarded, !SubscriptionStore.shared.isPro else { return }
+            showingPaywall = true
         }
     }
 }

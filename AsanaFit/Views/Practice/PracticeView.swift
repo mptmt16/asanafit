@@ -8,6 +8,8 @@ struct PracticeView: View {
     @Query private var balances: [BalanceCheck]
     @Query private var breathSessions: [BreathSession]
     @AppStorage(SettingsKey.favouriteAsanas) private var favouritesRaw = ""
+    /// Read so the list redraws the moment the developer unlock switch changes.
+    @AppStorage(SettingsKey.unlockEverything) private var unlockEverything = true
 
     @State private var search = ""
 
@@ -68,7 +70,7 @@ struct PracticeView: View {
     private var flowsSection: some View {
         Section("Flows") {
             ForEach(FlowLibrary.all) { flow in
-                let locked = playerLevel < Progression.unlockLevel(forFlow: flow.id)
+                let locked = !Progression.isUnlocked(flowID: flow.id, playerLevel: playerLevel)
                 NavigationLink {
                     FlowDetailView(flow: flow)
                 } label: {

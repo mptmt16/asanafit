@@ -36,6 +36,11 @@ enum SettingsKey {
     static let sleepHours = "sleepHours"
     static let sittingHours = "sittingHours"
     static let waterGlasses = "waterGlasses"
+    // Development only. See DevFlags.
+    static let unlockEverything = "unlockEverything"
+    static let showPaywallOnLaunch = "showPaywallOnLaunch"
+    static let isPro = "isPro"
+    static let activePlan = "activePlan"
 }
 
 extension String {

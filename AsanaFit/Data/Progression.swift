@@ -112,7 +112,7 @@ enum Progression {
     }
 
     static func isUnlocked(_ asana: Asana, playerLevel: Int) -> Bool {
-        playerLevel >= unlockLevel(for: asana.id)
+        DevFlags.unlockEverything || playerLevel >= unlockLevel(for: asana.id)
     }
 
     static func unlocked(playerLevel: Int) -> [Asana] {
@@ -131,6 +131,10 @@ enum Progression {
 
     static func unlockLevel(forFlow flowID: String) -> Int {
         flowUnlockLevels[flowID] ?? 1
+    }
+
+    static func isUnlocked(flowID: String, playerLevel: Int) -> Bool {
+        DevFlags.unlockEverything || playerLevel >= unlockLevel(forFlow: flowID)
     }
 
     static func flowUnlocks(atLevel level: Int) -> [Flow] {

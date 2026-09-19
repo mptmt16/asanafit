@@ -204,6 +204,26 @@ This is the honest limit of the approach, and the app is built around it rather 
 - Scan scoring lives in `BodyScoring`, where every threshold is written as a `best` and a `worst` value in real units — e.g. a forward fold scores 100 at 40° of hip angle and 0 at 110°.
 - `AVCaptureConnection.videoOrientation` is soft-deprecated in the iOS 17 SDK but still the simplest way to get upright frames, so you may see a deprecation warning.
 
+## Development flags
+
+The app currently ships with `DevFlags.isDevelopmentBuild = true`, which turns on three things
+that must not reach real users. All of them live in `AsanaFit/Data/DevFlags.swift`, and a
+**Developer** section appears at the bottom of Settings to toggle them on a device.
+
+| Flag | Default | What it does |
+|---|---|---|
+| `unlockEverything` | on | Every asana and flow is available from level 1. XP and levels still accumulate normally, the gates are simply ignored. |
+| `fakePaywall` | on | The paywall is a placeholder. It takes no payment, talks to no store, and says so on screen. "Buying" writes a flag to UserDefaults after a short delay so the loading and success states can be designed. |
+| `showPaywallOnLaunch` | off | Shows the paywall once on launch, for testing the first-run flow without reinstalling. |
+
+**Before shipping:** set `DevFlags.isDevelopmentBuild` to `false`. That one line removes the
+Developer section, re-arms the unlock gates and switches the paywall's copy to the real
+subscription terms — but it does **not** make the paywall real. `SubscriptionStore.purchase`
+and `restore` are stubs: they have to be implemented against StoreKit 2 with proper transaction
+verification, and `SubscriptionPlan.all`'s hard-coded prices replaced with localised `Product`
+values from the App Store. Start enforcing access in `SubscriptionStore.isLocked(_:)`, which
+every call site already routes through.
+
 ## Disclaimer
 
 AsanaFit is a wellness and training tool, **not a medical device**. It does not diagnose or treat any condition, and it cannot tell you whether a pose is safe for your body. If you are pregnant, recovering from an injury, or have a condition affecting your joints, spine, blood pressure or balance, talk to a clinician or a qualified teacher before starting. Come out of any pose that hurts.

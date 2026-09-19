@@ -13,6 +13,9 @@ struct ProfileView: View {
     @AppStorage(SettingsKey.sittingHours) private var sittingHours = 0.0
     @AppStorage(SettingsKey.waterGlasses) private var waterGlasses = 0
 
+    private let store = SubscriptionStore.shared
+    @State private var showingPaywall = false
+
     private var progress: Progression.LevelProgress {
         Progression.progress(forXP: Progression.totalXP(sessions: sessions, scans: scans,
                                                         balances: balances, breaths: breathSessions))
@@ -38,6 +41,26 @@ struct ProfileView: View {
                         }
                     }
                     .padding(.vertical, 4)
+                }
+
+                Section {
+                    Button {
+                        showingPaywall = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: store.isPro ? "checkmark.seal.fill" : "sparkles")
+                                .foregroundStyle(store.isPro ? Color(red: 0.45, green: 0.85, blue: 0.55) : Theme.warm)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(store.isPro ? "AsanaFit Pro is on" : "Get AsanaFit Pro")
+                                    .foregroundStyle(.primary)
+                                Text(store.activePlan.map { "\($0.name) plan" }
+                                     ?? "The whole library and your own practice plan")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
                 }
 
                 Section("About you") {
@@ -109,6 +132,7 @@ struct ProfileView: View {
             .scrollContentBackground(.hidden)
             .background(Color.black.ignoresSafeArea())
             .navigationTitle("You")
+            .sheet(isPresented: $showingPaywall) { PaywallView() }
         }
     }
 

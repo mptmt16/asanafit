@@ -14,6 +14,8 @@ struct TodayView: View {
     @AppStorage(SettingsKey.sleepHours) private var sleepHours = 0.0
     @AppStorage(SettingsKey.sittingHours) private var sittingHours = 0.0
     @AppStorage(SettingsKey.waterGlasses) private var waterGlasses = 0
+    /// Read so the flow row redraws the moment the developer unlock switch changes.
+    @AppStorage(SettingsKey.unlockEverything) private var unlockEverything = true
 
     @State private var practisingPlan = false
     @State private var scanning = false
@@ -133,7 +135,7 @@ struct TodayView: View {
             SectionHeader(title: "Flows", subtitle: "Ready-made sequences.")
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(FlowLibrary.all.filter { playerLevel >= Progression.unlockLevel(forFlow: $0.id) }) { flow in
+                    ForEach(FlowLibrary.all.filter { Progression.isUnlocked(flowID: $0.id, playerLevel: playerLevel) }) { flow in
                         NavigationLink {
                             FlowDetailView(flow: flow)
                         } label: {

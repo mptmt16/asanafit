@@ -13,8 +13,13 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.reminderMinutes) private var reminderMinutes = 8 * 60
     @AppStorage(SettingsKey.hasOnboarded) private var hasOnboarded = true
 
+    @AppStorage(SettingsKey.unlockEverything) private var unlockEverything = true
+    @AppStorage(SettingsKey.showPaywallOnLaunch) private var showPaywallOnLaunch = false
+
+    private let store = SubscriptionStore.shared
     @State private var notificationsDenied = false
     @State private var confirmingReset = false
+    @State private var showingPaywall = false
 
     private var reminderTime: Binding<Date> {
         Binding {
@@ -91,6 +96,10 @@ struct SettingsView: View {
                 Text("Everything AsanaFit records lives on this phone only. No account, no upload, no camera frames saved.")
             }
 
+            if DevFlags.isDevelopmentBuild {
+                developerSection
+            }
+
             Section {
                 LabeledContent("Version", value: "1.0")
                 LabeledContent("Poses", value: "\(AsanaLibrary.all.count)")
@@ -106,11 +115,31 @@ struct SettingsView: View {
         .onChange(of: reminderEnabled) { _, isOn in
             Task { await updateReminder(isOn) }
         }
+        .sheet(isPresented: $showingPaywall) { PaywallView() }
         .alert("Delete all history?", isPresented: $confirmingReset) {
             Button("Delete", role: .destructive) { deleteEverything() }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Every pose, scan, balance test and breathing practice is removed. This cannot be undone.")
+        }
+    }
+
+    /// Everything in here disappears with `DevFlags.isDevelopmentBuild`.
+    private var developerSection: some View {
+        Section {
+            Toggle("Unlock every pose and flow", isOn: $unlockEverything)
+            Toggle("Pro subscription active", isOn: Binding(
+                get: { store.isPro },
+                set: { store.setPro($0) }
+            ))
+            Toggle("Show paywall on launch", isOn: $showPaywallOnLaunch)
+            Button("Preview the paywall") { showingPaywall = true }
+        } header: {
+            Label("Developer", systemImage: "hammer.fill")
+        } footer: {
+            Text("Development build only. Unlocking does not touch your XP or level, it only "
+                 + "ignores the gates. The paywall is a placeholder and takes no payment. "
+                 + "Set DevFlags.isDevelopmentBuild to false to remove all of this.")
         }
     }
 
